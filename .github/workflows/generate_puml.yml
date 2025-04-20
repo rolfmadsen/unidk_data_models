@@ -54,12 +54,17 @@ jobs:
             >> diagram.puml
           echo "@enduml" >> diagram.puml
 
-      - name: Render PlantUML
+      - name: Render PlantUML to SVG
         run: |
-          docker run --rm -v $PWD:$PWD -w $PWD plantuml/plantuml:latest -tsvg diagram.puml
+          docker run --rm -v "$PWD":"$PWD" -w "$PWD" plantuml/plantuml:latest -tsvg diagram.puml
+
+      - name: List generated files
+        run: ls -1
 
       - name: Commit & Push
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "chore: update PlantUML classes"
-          file_pattern: diagram.puml
+          commit_message: "chore: update PlantUML files"
+          file_pattern: |
+            diagram.puml
+            diagram.svg
