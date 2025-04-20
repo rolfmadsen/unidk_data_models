@@ -60,18 +60,9 @@ jobs:
 
       - name: Inject diagram into README
         run: |
-          awk '
-            /<!-- DIAGRAM START -->/ {
-              print
-              system("cat diagram.md")
-              skip=1
-              next
-            }
-            /<!-- DIAGRAM END -->/ {
-              skip=0
-            }
-            !skip
-          ' README.md > README.new.md
+          sed -e '/<!-- DIAGRAM START -->/,/<!-- DIAGRAM END -->/{//!d}' \
+              -e '/<!-- DIAGRAM START -->/r diagram.md' \
+              README.md > README.new.md
           mv README.new.md README.md
 
       - name: Commit updated diagram and README
