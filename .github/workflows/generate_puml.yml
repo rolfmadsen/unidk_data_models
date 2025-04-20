@@ -20,10 +20,14 @@ jobs:
           BASE_URL: https://api.baserow.io
           TABLE_ID: 495798
         run: |
-          curl -s \
+          echo "→ Fetching table $TABLE_ID…" >&2
+          status=$(curl -s -o entities.json -w "%{http_code}" \
             -H "Authorization: Token $BASEROW_TOKEN" \
-            "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true&format=json" \
-            > entities.json
+            "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true")
+          echo "← HTTP $status" >&2
+          echo "--- entities.json ---" >&2
+          head -n 50 entities.json >&2
+          [[ "$status" -eq 200 ]] || { echo "Fetch failed"; exit 1; }
 
       - name: Build PlantUML
         run: |
