@@ -47,7 +47,10 @@ jobs:
       - name: Build PlantUML
         run: |
           echo "@startuml" > diagram.puml
-          jq -r '.results[] | "class \(.Name) {}"' entities.json \
+          # only emit classes when Klasse is non-null/non-empty
+          jq -r '.results[]
+                 | select(.Klasse != null and .Klasse != "")
+                 | "class \(.Klasse) {}"' entities.json \
             >> diagram.puml
           echo "@enduml" >> diagram.puml
 
