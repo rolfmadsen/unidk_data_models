@@ -1,5 +1,8 @@
 name: Generate PlantUML Diagram
 
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: '*/5 * * * *'
@@ -9,7 +12,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # ← Declare env here so *all* steps see these
     env:
       BASEROW_TOKEN: ${{ secrets.BASEROW_TOKEN }}
       BASE_URL: https://api.baserow.io
@@ -17,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: main 
 
       - name: Debug Baserow token
         run: |
