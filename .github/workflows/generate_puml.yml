@@ -13,6 +13,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+  
+      - name: Debug Baserow token
+        run: |
+          if [ -z "$BASEROW_TOKEN" ]; then
+            echo "❌ BASEROW_TOKEN is empty!"
+            exit 1
+          else
+            echo "✔️ BASEROW_TOKEN is set (length: ${#BASEROW_TOKEN})"
+          fi
 
       - name: Fetch all classes from Baserow
         env:
@@ -21,13 +30,15 @@ jobs:
           TABLE_ID: 495798
         run: |
           echo "→ Fetching table $TABLE_ID…" >&2
-          status=$(curl -s -o entities.json -w "%{http_code}" \
-            -H "Authorization: Token $BASEROW_TOKEN" \
-            "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true")
+          status=$(
+            curl -s -o entities.json -w "%{http_code}" \
+              -H "Authorization: Token $BASEROW_TOKEN" \
+              "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true"
+          )
           echo "← HTTP $status" >&2
           echo "--- entities.json ---" >&2
-          head -n 50 entities.json >&2
-          [[ "$status" -eq 200 ]] || { echo "Fetch failed"; exit 1; }
+          head -n 20 entities.json >&2
+          [[ "$status" -eq 200 ]] || { echo "❌ Fetch failed"; exit 1; }
 
       - name: Build PlantUML
         run: |
