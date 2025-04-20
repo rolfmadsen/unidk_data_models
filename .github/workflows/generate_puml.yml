@@ -54,6 +54,10 @@ jobs:
             >> diagram.puml
           echo "@enduml" >> diagram.puml
 
+      - name: Render PlantUML
+        run: |
+          docker run --rm -v $PWD:$PWD -w $PWD plantuml/plantuml:latest -tsvg diagram.puml
+
       - name: Commit & Push
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
