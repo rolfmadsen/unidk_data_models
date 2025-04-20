@@ -1,19 +1,23 @@
 name: Generate PlantUML Diagram
 
 on:
-  # every 5 minutes
   schedule:
     - cron: '*/5 * * * *'
-  # also allow manual runs
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
+    # ← Declare env here so *all* steps see these
+    env:
+      BASEROW_TOKEN: ${{ secrets.BASEROW_TOKEN }}
+      BASE_URL: https://api.baserow.io
+      TABLE_ID: 495798
+
     steps:
       - uses: actions/checkout@v3
-  
+
       - name: Debug Baserow token
         run: |
           if [ -z "$BASEROW_TOKEN" ]; then
@@ -24,10 +28,6 @@ jobs:
           fi
 
       - name: Fetch all classes from Baserow
-        env:
-          BASEROW_TOKEN: ${{ secrets.BASEROW_TOKEN }}
-          BASE_URL: https://api.baserow.io
-          TABLE_ID: 495798
         run: |
           echo "→ Fetching table $TABLE_ID…" >&2
           status=$(
