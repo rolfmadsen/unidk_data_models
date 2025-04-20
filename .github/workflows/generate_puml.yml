@@ -1,3 +1,4 @@
+# .github/workflows/generate_puml.yml
 name: Generate PlantUML Diagram
 
 permissions:
@@ -18,32 +19,56 @@ jobs:
       TABLE_ID: 495798
 
     steps:
-      - name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           ref: main
 
-      - name: Build diagram.puml
+      - name: Debug Baserow token
+        run: |
+          if [ -z "$BASEROW_TOKEN" ]; then
+            echo "❌ BASEROW_TOKEN is empty!"
+            exit 1
+          fi
+          echo "✔️ BASEROW_TOKEN is present (length ${#BASEROW_TOKEN})"
+
+      - name: Fetch raw JSON from Baserow
+        run: |
+          echo "→ Fetching table $TABLE_ID…" >&2
+          status=$(
+            curl -s -o entities.json -w "%{http_code}" \
+              -H "Authorization: Token $BASEROW_TOKEN" \
+              "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true"
+          )
+          echo "← HTTP status: $status" >&2
+          echo "--- head of entities.json ---" >&2
+          head -n 20 entities.json >&2
+          if [ "$status" -ne 200 ]; then
+            echo "❌ Failed to fetch Baserow data"
+            cat entities.json >&2
+            exit 1
+          fi
+
+      - name: Build diagram.puml
         run: |
           echo "@startuml" > diagram.puml
-          curl -s -H "Authorization: Token $BASEROW_TOKEN" \
-            "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true" \
-            | jq -r '.results[]
-                      | select(.Klasse != null and .Klasse != "")
-                      | "class \(.Klasse) {}"' \
+          jq -r '.results[]
+                 | select(.Klasse != null and .Klasse != "")
+                 | "class \(.Klasse) {}"' entities.json \
             >> diagram.puml
           echo "@enduml" >> diagram.puml
-          ls -1 diagram.puml
+          echo "Generated diagram.puml with $(wc -l < diagram.puml) lines"
 
-      - name: Render diagram.svg via Docker
+      - name: Render diagram.svg via Docker
         run: |
+          echo "Running PlantUML Docker..."
           docker run --rm \
             -v "${GITHUB_WORKSPACE}":/workspace -w /workspace \
-            plantuml/plantuml:latest \
-            -tsvg diagram.puml
-          ls -1 diagram.svg
+            plantuml/plantuml:latest -tsvg diagram.puml
+          echo "Resulting files:"
+          ls -1 diagram.puml diagram.svg
 
-      - name: Commit PUML & SVG
+      - name: Commit PUML & SVG
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "chore: update UML diagram"
