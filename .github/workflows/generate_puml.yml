@@ -22,7 +22,7 @@ jobs:
         run: |
           echo "→ Fetching table $TABLE_ID…" >&2
           status=$(curl -s -o entities.json -w "%{http_code}" \
-            -H "Authorization: Bearer $BASEROW_TOKEN" \
+            -H "Authorization: Token $BASEROW_TOKEN" \
             "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true")
           echo "← HTTP $status" >&2
           echo "--- entities.json ---" >&2
