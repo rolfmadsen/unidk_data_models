@@ -6,7 +6,7 @@ permissions:
 on:
   schedule:
     - cron: '*/5 * * * *'
-  workflow_dispatch: {}    # explicit empty object
+  workflow_dispatch: {}    # make sure you can manually trigger it
 
 jobs:
   build:
@@ -18,7 +18,8 @@ jobs:
       TABLE_ID: 495798
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout main
+        uses: actions/checkout@v3
         with:
           ref: main
 
@@ -27,9 +28,8 @@ jobs:
           if [ -z "$BASEROW_TOKEN" ]; then
             echo "❌ BASEROW_TOKEN is empty!"
             exit 1
-          else
-            echo "✔️ BASEROW_TOKEN is set (length: ${#BASEROW_TOKEN})"
           fi
+          echo "✔️ BASEROW_TOKEN is set (length ${#BASEROW_TOKEN})"
 
       - name: Fetch all classes from Baserow
         run: |
@@ -45,25 +45,40 @@ jobs:
 
       - name: Build Mermaid diagram
         run: |
-          # start Mermaid block
+          # start the Mermaid block
           echo '```mermaid' > diagram.md
           echo 'classDiagram'   >> diagram.md
 
-          # emit each non‑empty Klasse
+          # emit each non‑empty Klasse as a class
           jq -r '.results[]
                  | select(.Klasse != null and .Klasse != "")
                  | "  class \(.Klasse)"' entities.json \
-            >> diagram.md
+             >> diagram.md
 
-          # close fence
+          # close the fence
           echo '```'           >> diagram.md
 
-      - name: List outputs
-        run: ls -1
+      - name: Inject diagram into README
+        run: |
+          awk '
+            /<!-- DIAGRAM START -->/ {
+              print
+              system("cat diagram.md")
+              skip=1
+              next
+            }
+            /<!-- DIAGRAM END -->/ {
+              skip=0
+            }
+            !skip
+          ' README.md > README.new.md
+          mv README.new.md README.md
 
-      - name: Commit & Push
+      - name: Commit updated diagram and README
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "chore: update Mermaid diagram"
           file_pattern: |
             diagram.md
+            README.md
+          allow_empty_commit: true
