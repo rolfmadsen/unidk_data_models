@@ -6,11 +6,12 @@ permissions:
 on:
   schedule:
     - cron: '*/5 * * * *'
-  workflow_dispatch: {}    # ← make this explicit
+  workflow_dispatch: {}    # explicit empty object
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     env:
       BASEROW_TOKEN: ${{ secrets.BASEROW_TOKEN }}
       BASE_URL: https://api.baserow.io
@@ -39,24 +40,23 @@ jobs:
               "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true"
           )
           echo "← HTTP $status" >&2
-          echo "--- entities.json ---" >&2
           head -n 20 entities.json >&2
           [[ "$status" -eq 200 ]] || { echo "❌ Fetch failed"; exit 1; }
 
       - name: Build Mermaid diagram
         run: |
-          # Start a Mermaid classDiagram block
-          cat << 'EOF' > diagram.md
-```mermaid
-classDiagram
-EOF
-          # Emit each non‑empty Klasse as a Mermaid class
+          # start Mermaid block
+          echo '```mermaid' > diagram.md
+          echo 'classDiagram'   >> diagram.md
+
+          # emit each non‑empty Klasse
           jq -r '.results[]
                  | select(.Klasse != null and .Klasse != "")
                  | "  class \(.Klasse)"' entities.json \
             >> diagram.md
-          # Close the fence
-          echo '```' >> diagram.md
+
+          # close fence
+          echo '```'           >> diagram.md
 
       - name: List outputs
         run: ls -1
