@@ -1,4 +1,4 @@
-name: Generate PlantUML Diagram
+name: Generate Mermaid Class Diagram
 
 permissions:
   contents: write
@@ -44,27 +44,27 @@ jobs:
           head -n 20 entities.json >&2
           [[ "$status" -eq 200 ]] || { echo "❌ Fetch failed"; exit 1; }
 
-      - name: Build PlantUML
+      - name: Build Mermaid diagram
         run: |
-          echo "@startuml" > diagram.puml
-          # only emit classes when Klasse is non-null/non-empty
+          # Start a Mermaid classDiagram block
+          cat << 'EOF' > diagram.md
+```mermaid
+classDiagram
+EOF
+          # Emit each non‑empty Klasse as a Mermaid class
           jq -r '.results[]
                  | select(.Klasse != null and .Klasse != "")
-                 | "class \(.Klasse) {}"' entities.json \
-            >> diagram.puml
-          echo "@enduml" >> diagram.puml
+                 | "  class \(.Klasse)"' entities.json \
+            >> diagram.md
+          # Close the fence
+          echo '```' >> diagram.md
 
-      - name: Render PlantUML to SVG
-        run: |
-          docker run --rm -v "$PWD":"$PWD" -w "$PWD" plantuml/plantuml:latest -tsvg diagram.puml
-
-      - name: List generated files
+      - name: List outputs
         run: ls -1
 
       - name: Commit & Push
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "chore: update PlantUML files"
+          commit_message: "chore: update Mermaid diagram"
           file_pattern: |
-            diagram.puml
-            diagram.svg
+            diagram.md
