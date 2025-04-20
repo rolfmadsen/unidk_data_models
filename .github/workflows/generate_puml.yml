@@ -1,12 +1,16 @@
 name: Generate PlantUML Diagram
 
 on:
-  repository_dispatch:
-    types: [baserow_update]
+  # every 5 minutes
+  schedule:
+    - cron: '*/5 * * * *'
+  # also allow manual runs
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
 
@@ -16,8 +20,9 @@ jobs:
           BASE_URL: https://api.baserow.io
           TABLE_ID: 495798
         run: |
-          curl -s -H "Authorization: Token $BASEROW_TOKEN" \
-               "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true&format=json" \
+          curl -s \
+            -H "Authorization: Token $BASEROW_TOKEN" \
+            "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true&format=json" \
             > entities.json
 
       - name: Build PlantUML
