@@ -14,7 +14,7 @@ jobs:
         env:
           BASEROW_TOKEN: ${{ secrets.BASEROW_TOKEN }}
           BASE_URL: https://api.baserow.io
-          TABLE_ID: 123    # ← your Entities table ID
+          TABLE_ID: 495798
         run: |
           curl -s -H "Authorization: Token $BASEROW_TOKEN" \
                "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true&format=json" \
