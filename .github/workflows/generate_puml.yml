@@ -1,4 +1,5 @@
-name: Generate Mermaid Class Diagram
+# .github/workflows/generate_puml.yml
+name: Generate PlantUML Diagram
 
 permissions:
   contents: write
@@ -6,7 +7,7 @@ permissions:
 on:
   schedule:
     - cron: '*/5 * * * *'
-  workflow_dispatch: {}    # make sure you can manually trigger it
+  workflow_dispatch: {}    # enable the “Run workflow” button
 
 jobs:
   build:
@@ -18,58 +19,33 @@ jobs:
       TABLE_ID: 495798
 
     steps:
-      - name: Checkout main
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           ref: main
 
-      - name: Debug Baserow token
+      - name: Fetch classes and build PUML
         run: |
-          if [ -z "$BASEROW_TOKEN" ]; then
-            echo "❌ BASEROW_TOKEN is empty!"
-            exit 1
-          fi
-          echo "✔️ BASEROW_TOKEN is set (length ${#BASEROW_TOKEN})"
+          echo "@startuml" > diagram.puml
+          curl -s -H "Authorization: Token $BASEROW_TOKEN" \
+            "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true" \
+            | jq -r '.results[]
+                      | select(.Klasse != null and .Klasse != "")
+                      | "class \(.Klasse) {}"' \
+            >> diagram.puml
+          echo "@enduml" >> diagram.puml
 
-      - name: Fetch all classes from Baserow
+      - name: Render PlantUML → SVG
         run: |
-          echo "→ Fetching table $TABLE_ID…" >&2
-          status=$(
-            curl -s -o entities.json -w "%{http_code}" \
-              -H "Authorization: Token $BASEROW_TOKEN" \
-              "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true"
-          )
-          echo "← HTTP $status" >&2
-          head -n 20 entities.json >&2
-          [[ "$status" -eq 200 ]] || { echo "❌ Fetch failed"; exit 1; }
+          docker run --rm \
+            -v "$PWD":/workspace -w /workspace \
+            plantuml/plantuml:latest \
+            -tsvg diagram.puml
 
-      - name: Build Mermaid diagram
-        run: |
-          # start the Mermaid block
-          echo '```mermaid' > diagram.md
-          echo 'classDiagram'   >> diagram.md
-
-          # emit each non‑empty Klasse as a class
-          jq -r '.results[]
-                 | select(.Klasse != null and .Klasse != "")
-                 | "  class \(.Klasse)"' entities.json \
-             >> diagram.md
-
-          # close the fence
-          echo '```'           >> diagram.md
-
-      - name: Inject diagram into README
-        run: |
-          sed -e '/<!-- DIAGRAM START -->/,/<!-- DIAGRAM END -->/{//!d}' \
-              -e '/<!-- DIAGRAM START -->/r diagram.md' \
-              README.md > README.new.md
-          mv README.new.md README.md
-
-      - name: Commit updated diagram and README
+      - name: Commit PUML & SVG
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "chore: update Mermaid diagram"
+          commit_message: "chore: update UML diagram"
           file_pattern: |
-            diagram.md
-            README.md
-          allow_empty_commit: true
+            diagram.puml
+            diagram.svg
