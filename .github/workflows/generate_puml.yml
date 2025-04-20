@@ -1,4 +1,3 @@
-# .github/workflows/generate_puml.yml
 name: Generate PlantUML Diagram
 
 permissions:
@@ -7,7 +6,7 @@ permissions:
 on:
   schedule:
     - cron: '*/5 * * * *'
-  workflow_dispatch: {}    # enable the “Run workflow” button
+  workflow_dispatch: {}
 
 jobs:
   build:
@@ -19,30 +18,32 @@ jobs:
       TABLE_ID: 495798
 
     steps:
-      - name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           ref: main
 
-      - name: Fetch classes and build PUML
+      - name: Build diagram.puml
         run: |
           echo "@startuml" > diagram.puml
-          curl -s -H "Authorization: Token $BASEROW_TOKEN" \
+          curl -s -H "Authorization: Token $BASEROW_TOKEN" \
             "$BASE_URL/api/database/rows/table/$TABLE_ID/?user_field_names=true" \
             | jq -r '.results[]
                       | select(.Klasse != null and .Klasse != "")
                       | "class \(.Klasse) {}"' \
             >> diagram.puml
           echo "@enduml" >> diagram.puml
+          ls -1 diagram.puml
 
-      - name: Render PlantUML → SVG
+      - name: Render diagram.svg via Docker
         run: |
           docker run --rm \
-            -v "$PWD":/workspace -w /workspace \
+            -v "${GITHUB_WORKSPACE}":/workspace -w /workspace \
             plantuml/plantuml:latest \
             -tsvg diagram.puml
+          ls -1 diagram.svg
 
-      - name: Commit PUML & SVG
+      - name: Commit PUML & SVG
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "chore: update UML diagram"
